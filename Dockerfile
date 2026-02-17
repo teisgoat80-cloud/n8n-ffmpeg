@@ -1,21 +1,23 @@
+# Start from Debian with package manager
+FROM debian:bullseye-slim AS builder
+
+# Install FFmpeg
+RUN apt-get update && \
+    apt-get install -y ffmpeg curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Now layer n8n on top
 FROM n8nio/n8n:latest
 
 USER root
 
-# Check what OS we're on
-RUN cat /etc/os-release
-
-# Try Alpine package manager
-RUN apk --version || echo "apk not found"
-
-# Try Debian package manager  
-RUN apt-get --version || echo "apt-get not found"
-
-# Install FFmpeg based on what's available
-RUN if command -v apk > /dev/null; then \
-        apk add --no-cache ffmpeg; \
-    elif command -v apt-get > /dev/null; then \
-        apt-get update && apt-get install -y ffmpeg; \
-    fi
+# Copy FFmpeg from builder stage
+COPY --from=builder /usr/bin/ffmpeg /usr/bin/ffmpeg
+COPY --from=builder /usr/lib/*-linux-gnu/libav*.so* /usr/lib/
+COPY --from=builder /usr/lib/*-linux-gnu/libsw*.so* /usr/lib/
+COPY --from=builder /usr/lib/*-linux-gnu/libpostproc*.so* /usr/lib/
+COPY --from=builder /usr/lib/*-linux-gnu/libx264*.so* /usr/lib/
+COPY --from=builder /usr/lib/*-linux-gnu/libx265*.so* /usr/lib/
 
 USER node
